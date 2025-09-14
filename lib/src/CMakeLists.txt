@@ -136,6 +136,10 @@ ExternalProject_Add(transmission
         ${LIBS}
 )
 
+if(NOT TARGET flutter_torrent)
+    add_library(flutter_torrent SHARED "flutter_torrent.cc")
+endif()
+
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
     add_custom_command(TARGET flutter_torrent POST_BUILD
             COMMAND ${CMAKE_STRIP} $<TARGET_FILE:flutter_torrent>
@@ -145,9 +149,9 @@ endif ()
 find_package(CURL REQUIRED)
 find_package(OpenSSL REQUIRED)
 
-add_library(flutter_torrent SHARED
-        "flutter_torrent.cc"
-)
+#add_library(flutter_torrent SHARED
+#        "flutter_torrent.cc"
+#)
 
 add_dependencies(flutter_torrent transmission)
 
