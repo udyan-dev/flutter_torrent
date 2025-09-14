@@ -40,25 +40,35 @@ android {
         jvmTarget = JavaVersion.VERSION_17
     }
 
-    sourceSets {
-        main.java.srcDirs += "src/main/kotlin"
-    }
-
-    externalNativeBuild {
-        cmake {
-            path = "../lib/src/CMakeLists.txt"
-            version "3.22.1"
-        }
-    }
+//    sourceSets {
+//        main.java.srcDirs += "src/main/kotlin"
+//    }
+//
+//    externalNativeBuild {
+//        cmake {
+//            path = "../lib/src/CMakeLists.txt"
+//            version "3.22.1"
+//        }
+//    }
 
     defaultConfig {
         minSdk = 26
-        externalNativeBuild {
-            cmake {
-                arguments "-DVCPKG_TARGET_ANDROID=ON", "-DANDROID_STL=c++_shared"
-                cFlags "-Oz -ffunction-sections -fdata-sections -fvisibility=hidden -DNDEBUG -flto"
-                cppFlags "-Oz -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -DNDEBUG -flto"
-            }
+//        externalNativeBuild {
+//            cmake {
+//                arguments "-DCMAKE_BUILD_TYPE=Release", "-DVCPKG_TARGET_ANDROID=ON", "-DANDROID_STL=c++_shared"
+//                cFlags "-Oz -ffunction-sections -fdata-sections -fvisibility=hidden -DNDEBUG -flto"
+//                cppFlags "-Oz -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -DNDEBUG -flto"
+//            }
+//        }
+//        ndk {
+//            abiFilters "arm64-v8a"
+//        }
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs += "src/main/kotlin"
+            jniLibs.srcDirs = ["src/main/jniLibs"]
         }
     }
 }
