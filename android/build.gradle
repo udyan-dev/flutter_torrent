@@ -1,5 +1,18 @@
+//plugins {
+//    id "com.android.application"
+//    id "kotlin-android"
+//}
+
 group = "com.ironfist.flutter_torrent"
 version = "1.0-SNAPSHOT"
+
+//def flutterRoot = {
+//    def properties = new Properties()
+//    file("local.properties").withInputStream { properties.load(it) }
+//    return properties.getProperty("flutter.sdk")
+//}()
+//
+//def engineVersion = new File(flutterRoot, "bin/cache/engine.stamp").text.trim()
 
 buildscript {
     ext.kotlin_version = "2.2.10"
@@ -9,7 +22,7 @@ buildscript {
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:8.12.2")
+        classpath("com.android.tools.build:gradle:8.13.0")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
     }
 }
@@ -71,4 +84,41 @@ android {
             jniLibs.srcDirs = ["src/main/jniLibs"]
         }
     }
+
+//    buildTypes {
+//        release {
+//            // Full code/resource shrink and no debug
+//            minifyEnabled true
+//            shrinkResources true
+//            debuggable false
+//            // Remove any possibility of native debug packaging
+//            jniDebuggable false
+//        }
+//    }
+//
+//    // Split APKs by architecture for smaller downloads
+//    splits {
+//        abi {
+//            enable true
+//            reset()
+//            include 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+//            universalApk true
+//        }
+//    }
+//
+//    // ---------- Packaging options: exclude obvious debug artifacts ----------
+//    packagingOptions {
+//        resources {
+//            excludes += ["**/*.map", "**/*.debug", "**/*.pdb"]
+//        }
+//        // Make sure we do not keep any .so debug symbol packages
+//        jniLibs {
+//            useLegacyPackaging = false
+//        }
+//    }
 }
+
+//dependencies {
+//    // Flutter embedding dependency - required for FlutterPlugin, MethodChannel, etc.
+//    compileOnly "io.flutter:flutter_embedding_release:1.0.0-$engineVersion"
+//}
