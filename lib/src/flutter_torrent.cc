@@ -1,4 +1,4 @@
-#include "flutter_torrent.h"
+﻿#include "flutter_torrent.h"
 
 using std::string;
 
@@ -25,7 +25,7 @@ typedef struct {
   std::promise<std::string> promise;
 } callback_struct;
 
-tr_session *session;
+tr_session *session = nullptr;
 std::string configDir;
 
 static void rpc_response_func(tr_session *session, tr_variant *response,
@@ -43,6 +43,11 @@ static void execute_request(callback_struct &cs) {
 }
 
 FFI_PLUGIN_EXPORT void init_session(char *config_dir, char *app_name) {
+  // Skip if session already exists (process kept alive by foreground service)
+  if (session != nullptr) {
+    return;
+  }
+
   tr_variant settings;
   configDir = config_dir;
 
@@ -65,11 +70,21 @@ FFI_PLUGIN_EXPORT void init_session(char *config_dir, char *app_name) {
 }
 
 FFI_PLUGIN_EXPORT void close_session() {
+  if (session == nullptr) {
+    return;
+  }
   save_settings();
   tr_sessionClose(session);
+  session = nullptr;
 }
 
 FFI_PLUGIN_EXPORT char *request(char *json_string) {
+  if (session == nullptr) {
+    char *error = new char[50];
+    std::strcpy(error, "{\"result\":\"error\",\"arguments\":{}}");
+    return error;
+  }
+
   callback_struct callback_user_data;
   tr_variantFromBuf(&callback_user_data.request, TR_VARIANT_PARSE_JSON,
                     string(json_string));
@@ -86,6 +101,10 @@ FFI_PLUGIN_EXPORT char *request(char *json_string) {
 }
 
 FFI_PLUGIN_EXPORT void save_settings() {
+  if (session == nullptr) {
+    return;
+  }
+
   tr_variant settings;
 
   tr_variantInitDict(&settings, 0);
@@ -94,6 +113,10 @@ FFI_PLUGIN_EXPORT void save_settings() {
 }
 
 FFI_PLUGIN_EXPORT void reset_settings() {
+  if (session == nullptr) {
+    return;
+  }
+
   tr_variant default_settings;
 
   tr_variantInitDict(&default_settings, 0);
