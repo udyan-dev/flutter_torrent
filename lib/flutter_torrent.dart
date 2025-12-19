@@ -71,16 +71,18 @@ Future<SendPort> _helperIsolateSendPort = () async {
   final ReceivePort receivePort = ReceivePort()
     ..listen((dynamic data) {
       if (data is SendPort) {
-        completer.complete(data);
+        if (!completer.isCompleted) {
+          completer.complete(data);
+        }
         return;
       }
       if (data is _TransmissionRequestResponse) {
-        final Completer<String> completer = _requestRequests[data.id]!;
-        _requestRequests.remove(data.id);
-        completer.complete(data.result);
+        final Completer<String>? requestCompleter = _requestRequests.remove(data.id);
+        if (requestCompleter != null && !requestCompleter.isCompleted) {
+          requestCompleter.complete(data.result);
+        }
         return;
       }
-      throw UnsupportedError('Unsupported message type: ${data.runtimeType}');
     });
 
   await Isolate.spawn((SendPort sendPort) async {
