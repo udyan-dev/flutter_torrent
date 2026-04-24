@@ -78,4 +78,16 @@ class FlutterTorrentBindings {
   late final _reset_settingsPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function()>>('reset_settings');
   late final _reset_settings = _reset_settingsPtr.asFunction<void Function()>();
+
+  /// Free a response pointer previously returned by `request`.
+  void free_response(ffi.Pointer<ffi.Char> resp) {
+    return _free_response(resp);
+  }
+
+  late final _free_responsePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Char>)>>(
+        'free_response',
+      );
+  late final _free_response = _free_responsePtr
+      .asFunction<void Function(ffi.Pointer<ffi.Char>)>();
 }

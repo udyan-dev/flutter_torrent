@@ -11,9 +11,9 @@ const String _libName = 'flutter_torrent';
 
 /// Direct FFI call - use from any isolate including background TaskHandler.
 void initSession(String configDir, String appName) => _bindings.init_session(
-      configDir.toNativeUtf8().cast<Char>(),
-      appName.toNativeUtf8().cast<Char>(),
-    );
+  configDir.toNativeUtf8().cast<Char>(),
+  appName.toNativeUtf8().cast<Char>(),
+);
 
 void closeSession() => _bindings.close_session();
 
@@ -22,8 +22,13 @@ void saveSettings() => _bindings.save_settings();
 void resetSettings() => _bindings.reset_settings();
 
 /// Synchronous request - use from background isolates where helper isolate is unavailable.
-String request(String json) =>
-    _bindings.request(json.toNativeUtf8().cast<Char>()).cast<Utf8>().toDartString();
+String request(String json) {
+  final Pointer<Char> p = _bindings.request(json.toNativeUtf8().cast<Char>());
+  final String s = p.cast<Utf8>().toDartString();
+  // Free native buffer allocated by the native side.
+  _bindings.free_response(p);
+  return s;
+}
 
 /// Asynchronous request using helper isolate - use from main isolate for non-blocking calls.
 Future<String> requestAsync(String json) async {
@@ -51,6 +56,8 @@ final DynamicLibrary _dylib = () {
 
 final FlutterTorrentBindings _bindings = FlutterTorrentBindings(_dylib);
 
+// `free_response` binding is provided by generated bindings in `flutter_torrent_bindings_generated.dart`.
+
 class _TransmissionRequest {
   final int id;
   final String json;
@@ -77,7 +84,9 @@ Future<SendPort> _helperIsolateSendPort = () async {
         return;
       }
       if (data is _TransmissionRequestResponse) {
-        final Completer<String>? requestCompleter = _requestRequests.remove(data.id);
+        final Completer<String>? requestCompleter = _requestRequests.remove(
+          data.id,
+        );
         if (requestCompleter != null && !requestCompleter.isCompleted) {
           requestCompleter.complete(data.result);
         }
@@ -89,8 +98,16 @@ Future<SendPort> _helperIsolateSendPort = () async {
     final ReceivePort helperReceivePort = ReceivePort()
       ..listen((dynamic data) {
         if (data is _TransmissionRequest) {
-          final result = _bindings.request(data.json.toNativeUtf8().cast<Char>());
-          final response = _TransmissionRequestResponse(data.id, result.cast<Utf8>().toDartString());
+          final result = _bindings.request(
+            data.json.toNativeUtf8().cast<Char>(),
+          );
+          final String responseString = result.cast<Utf8>().toDartString();
+          // Free native buffer before sending back.
+          _bindings.free_response(result);
+          final response = _TransmissionRequestResponse(
+            data.id,
+            responseString,
+          );
           sendPort.send(response);
           return;
         }

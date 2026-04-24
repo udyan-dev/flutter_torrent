@@ -106,16 +106,16 @@ android {
 //        }
 //    }
 //
-//    // ---------- Packaging options: exclude obvious debug artifacts ----------
-//    packagingOptions {
-//        resources {
-//            excludes += ["**/*.map", "**/*.debug", "**/*.pdb"]
-//        }
-//        // Make sure we do not keep any .so debug symbol packages
-//        jniLibs {
-//            useLegacyPackaging = false
-//        }
-//    }
+    // ---------- Packaging options: exclude obvious debug artifacts ----------
+    packagingOptions {
+        resources {
+            excludes += ["**/*.map", "**/*.debug", "**/*.pdb"]
+        }
+        // Make sure we do not keep any .so debug symbol packages
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
 }
 
 //dependencies {

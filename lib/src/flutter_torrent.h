@@ -22,6 +22,9 @@ FFI_PLUGIN_EXPORT void init_session(char *config_dir, char *app_name);
 // Close transmission session.
 FFI_PLUGIN_EXPORT void close_session();
 
+// Free a response pointer previously returned by `request`.
+FFI_PLUGIN_EXPORT void free_response(char *resp);
+
 /* Long running function which should be called asynchronously.
  * This function will return a char pointer which should be freed.
  */
