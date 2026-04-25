@@ -8,7 +8,10 @@
 // ignore_for_file: type=lint
 import 'dart:ffi' as ffi;
 
-/// Temporary shim config to generate bindings without modifying source headers.
+/// Bindings for `src/flutter_torrent.h`.
+///
+/// Regenerate bindings with `dart run ffigen --config ffigen.yaml`.
+///
 class FlutterTorrentBindings {
   /// Holds the symbol lookup function.
   final ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName)
@@ -23,25 +26,19 @@ class FlutterTorrentBindings {
     ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) lookup,
   ) : _lookup = lookup;
 
-  /// Prototypes mirrored from flutter_torrent.h
-  void init_session(
-    ffi.Pointer<ffi.Char> config_dir,
-    ffi.Pointer<ffi.Char> app_name,
-  ) {
-    return _init_session(config_dir, app_name);
+  /// Initialize a transmission session given a config dir and an app name.
+  void init_session(ffi.Pointer<ffi.Char> config_dir) {
+    return _init_session(config_dir);
   }
 
   late final _init_sessionPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Void Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)
-        >
-      >('init_session');
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Char>)>>(
+        'init_session',
+      );
   late final _init_session = _init_sessionPtr
-      .asFunction<
-        void Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)
-      >();
+      .asFunction<void Function(ffi.Pointer<ffi.Char>)>();
 
+  /// Close transmission session.
   void close_session() {
     return _close_session();
   }
@@ -50,6 +47,8 @@ class FlutterTorrentBindings {
       _lookup<ffi.NativeFunction<ffi.Void Function()>>('close_session');
   late final _close_session = _close_sessionPtr.asFunction<void Function()>();
 
+  /// Long running function which should be called asynchronously.
+  /// This function will return a char pointer which should be freed.
   ffi.Pointer<ffi.Char> request(ffi.Pointer<ffi.Char> json_string) {
     return _request(json_string);
   }
@@ -63,6 +62,7 @@ class FlutterTorrentBindings {
   late final _request = _requestPtr
       .asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<ffi.Char>)>();
 
+  /// Save current transmission settings to disk.
   void save_settings() {
     return _save_settings();
   }
@@ -71,6 +71,7 @@ class FlutterTorrentBindings {
       _lookup<ffi.NativeFunction<ffi.Void Function()>>('save_settings');
   late final _save_settings = _save_settingsPtr.asFunction<void Function()>();
 
+  /// Reset all session settings
   void reset_settings() {
     return _reset_settings();
   }
@@ -78,16 +79,4 @@ class FlutterTorrentBindings {
   late final _reset_settingsPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function()>>('reset_settings');
   late final _reset_settings = _reset_settingsPtr.asFunction<void Function()>();
-
-  /// Free a response pointer previously returned by `request`.
-  void free_response(ffi.Pointer<ffi.Char> resp) {
-    return _free_response(resp);
-  }
-
-  late final _free_responsePtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Char>)>>(
-        'free_response',
-      );
-  late final _free_response = _free_responsePtr
-      .asFunction<void Function(ffi.Pointer<ffi.Char>)>();
 }

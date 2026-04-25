@@ -9,11 +9,11 @@ import 'flutter_torrent_bindings_generated.dart';
 
 const String _libName = 'flutter_torrent';
 
-/// Direct FFI call - use from any isolate including background TaskHandler.
-void initSession(String configDir, String appName) => _bindings.init_session(
-  configDir.toNativeUtf8().cast<Char>(),
-  appName.toNativeUtf8().cast<Char>(),
-);
+/// For very short-lived functions, it is fine to call them on the main isolate.
+/// They will block the Dart execution while running the native function, so
+/// only do this for native functions which are guaranteed to be short-lived.
+void initSession(String configDir) =>
+    _bindings.init_session(configDir.toNativeUtf8().cast<Char>());
 
 void closeSession() => _bindings.close_session();
 
@@ -21,16 +21,16 @@ void saveSettings() => _bindings.save_settings();
 
 void resetSettings() => _bindings.reset_settings();
 
-/// Synchronous request - use from background isolates where helper isolate is unavailable.
-String request(String json) {
-  final Pointer<Char> p = _bindings.request(json.toNativeUtf8().cast<Char>());
-  final String s = p.cast<Utf8>().toDartString();
-  // Free native buffer allocated by the native side.
-  _bindings.free_response(p);
-  return s;
-}
-
-/// Asynchronous request using helper isolate - use from main isolate for non-blocking calls.
+/// A longer lived native function, which occupies the thread calling it.
+///
+/// Do not call these kind of native functions in the main isolate. They will
+/// block Dart execution. This will cause dropped frames in Flutter applications.
+/// Instead, call these native functions on a separate isolate.
+///
+/// Modify this to suit your own use case. Example use cases:
+///
+/// 1. Reuse a single isolate for various different kinds of requests.
+/// 2. Use multiple helper isolates for parallel execution.
 Future<String> requestAsync(String json) async {
   final SendPort helperIsolateSendPort = await _helperIsolateSendPort;
   final int requestId = _nextTransmissionRequestId++;
@@ -41,6 +41,7 @@ Future<String> requestAsync(String json) async {
   return completer.future;
 }
 
+/// The dynamic library in which the symbols for [FlutterTorrentBindings] can be found.
 final DynamicLibrary _dylib = () {
   if (Platform.isMacOS || Platform.isIOS) {
     return DynamicLibrary.open('$_libName.framework/$_libName');
@@ -54,67 +55,85 @@ final DynamicLibrary _dylib = () {
   throw UnsupportedError('Unknown platform: ${Platform.operatingSystem}');
 }();
 
+/// The bindings to the native functions in [_dylib].
 final FlutterTorrentBindings _bindings = FlutterTorrentBindings(_dylib);
 
-// `free_response` binding is provided by generated bindings in `flutter_torrent_bindings_generated.dart`.
-
+/// A request to send to transmission.
+///
+/// Typically sent from one isolate to another.
 class _TransmissionRequest {
   final int id;
   final String json;
+
   const _TransmissionRequest(this.id, this.json);
 }
 
+/// A response with the result of the request.
+///
+/// Typically sent from one isolate to another.
 class _TransmissionRequestResponse {
   final int id;
   final String result;
+
   const _TransmissionRequestResponse(this.id, this.result);
 }
 
+/// Counter to identify [_TransmissionRequest]s and [_TransmissionRequestResponse]s.
 int _nextTransmissionRequestId = 0;
+
+/// Mapping from [_TransmissionRequest] `id`s to the completers corresponding to the correct future of the pending request.
 final Map<int, Completer<String>> _requestRequests = <int, Completer<String>>{};
 
+/// The SendPort belonging to the helper isolate.
 Future<SendPort> _helperIsolateSendPort = () async {
+  // The helper isolate is going to send us back a SendPort, which we want to
+  // wait for.
   final Completer<SendPort> completer = Completer<SendPort>();
+
+  // Receive port on the main isolate to receive messages from the helper.
+  // We receive two types of messages:
+  // 1. A port to send messages on.
+  // 2. Responses to requests we sent.
   final ReceivePort receivePort = ReceivePort()
     ..listen((dynamic data) {
       if (data is SendPort) {
-        if (!completer.isCompleted) {
-          completer.complete(data);
-        }
+        // The helper isolate sent us the port on which we can sent it requests.
+        completer.complete(data);
         return;
       }
       if (data is _TransmissionRequestResponse) {
-        final Completer<String>? requestCompleter = _requestRequests.remove(
-          data.id,
-        );
-        if (requestCompleter != null && !requestCompleter.isCompleted) {
-          requestCompleter.complete(data.result);
-        }
+        // The helper isolate sent us a response to a request we sent.
+        final Completer<String> completer = _requestRequests[data.id]!;
+        _requestRequests.remove(data.id);
+        completer.complete(data.result);
         return;
       }
+      throw UnsupportedError('Unsupported message type: ${data.runtimeType}');
     });
 
+  // Start the helper isolate.
   await Isolate.spawn((SendPort sendPort) async {
     final ReceivePort helperReceivePort = ReceivePort()
       ..listen((dynamic data) {
+        // On the helper isolate listen to requests and respond to them.
         if (data is _TransmissionRequest) {
           final result = _bindings.request(
             data.json.toNativeUtf8().cast<Char>(),
           );
-          final String responseString = result.cast<Utf8>().toDartString();
-          // Free native buffer before sending back.
-          _bindings.free_response(result);
-          final response = _TransmissionRequestResponse(
-            data.id,
-            responseString,
-          );
+          String str = result.cast<Utf8>().toDartString();
+          final _TransmissionRequestResponse response =
+              _TransmissionRequestResponse(data.id, str);
           sendPort.send(response);
           return;
         }
         throw UnsupportedError('Unsupported message type: ${data.runtimeType}');
       });
+
+    // Send the port to the main isolate on which we can receive requests.
     sendPort.send(helperReceivePort.sendPort);
   }, receivePort.sendPort);
 
+  // Wait until the helper isolate has sent us back the SendPort on which we
+  // can start sending requests.
   return completer.future;
 }();

@@ -1,29 +1,21 @@
-#include <array>
-#include <cstring>
-#include <future>
-#include <string>
+#ifndef FLUTTER_TORRENT_H
+#define FLUTTER_TORRENT_H
 
-#include "rpcimpl.h"
-#include "transmission.h"
-#include "utils.h"
-#include "variant.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#if _WIN32
-#define FFI_PLUGIN_EXPORT extern "C" __declspec(dllexport)
-#elif __cplusplus
-#define FFI_PLUGIN_EXPORT extern "C" __attribute__((visibility("default"))) __attribute__((used))
+#if defined(_WIN32)
+  #define FFI_PLUGIN_EXPORT __declspec(dllexport)
 #else
-#define FFI_PLUGIN_EXPORT __attribute__((visibility("default"))) __attribute__((used))
+  #define FFI_PLUGIN_EXPORT __attribute__((visibility("default"))) __attribute__((used))
 #endif
 
 // Initialize a transmission session given a config dir and an app name.
-FFI_PLUGIN_EXPORT void init_session(char *config_dir, char *app_name);
+FFI_PLUGIN_EXPORT void init_session(char *config_dir);
 
 // Close transmission session.
 FFI_PLUGIN_EXPORT void close_session();
-
-// Free a response pointer previously returned by `request`.
-FFI_PLUGIN_EXPORT void free_response(char *resp);
 
 /* Long running function which should be called asynchronously.
  * This function will return a char pointer which should be freed.
@@ -35,3 +27,9 @@ FFI_PLUGIN_EXPORT void save_settings();
 
 // Reset all session settings
 FFI_PLUGIN_EXPORT void reset_settings();
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+#endif // FLUTTER_TORRENT_H

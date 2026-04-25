@@ -1,0 +1,1 @@
+-keep class com.ironfist.flutter_torrent.** { *; }
